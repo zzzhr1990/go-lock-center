@@ -38,7 +38,6 @@ func CreateNew(config *Config) (*Locker, error) {
 		_, err := connt.Do("INFO")
 		connt.Close()
 		if err == nil {
-			// log.Printf("Redis server response: %v", resp)
 			sts = append(sts, pool)
 		} else {
 			log.Printf("Redis server error: %v", err)
@@ -49,21 +48,9 @@ func CreateNew(config *Config) (*Locker, error) {
 	if len(sts) == 0 {
 		return nil, errors.New("No redis server available")
 	}
-
-	// sts.
-	/*
-		pool, err :=  &redis.Pool{
-			MaxIdle: 3,
-			IdleTimeout: 240 * time.Second,
-			// Dial or DialContext must be set. When both are set, DialContext takes precedence over Dial.
-			Dial: func () (redis.Conn, error) { return redis.Dial("tcp", config.RedisAddress) },
-		  }
-	*/
-	// sts = redis.NewPool()
 	locker := &Locker{
 		sync: redsync.New(sts),
 	}
-	// redsync.N
 
 	return locker, nil
 }
