@@ -68,11 +68,27 @@ func CreateNew(config *Config) (*Locker, error) {
 	return locker, nil
 }
 
+// LockForKey lock for special key
+func (l *Locker) LockForKey(key string, expiry time.Duration) (*redsync.Mutex, error) {
+	// opt := redsync.SetTries(5)
+	// redsync.SetGenValueFunc()
+	// mx := l.sync.NewMutex(key, redsync.SetExpiry(expiry), redsync.SetTries(retry), redsync.SetRetryDelay(time.Second*5))
+	return l.LockForKeyWithRetry(key, expiry, 5)
+}
+
 // LockForKeyWithRetry lock for special key
 func (l *Locker) LockForKeyWithRetry(key string, expiry time.Duration, retry int) (*redsync.Mutex, error) {
 	// opt := redsync.SetTries(5)
 	// redsync.SetGenValueFunc()
-	mx := l.sync.NewMutex(key, redsync.SetExpiry(expiry), redsync.SetTries(retry), redsync.SetRetryDelay(time.Second*5))
+	// mx := l.sync.NewMutex(key, redsync.SetExpiry(expiry), redsync.SetTries(retry), redsync.SetRetryDelay(time.Second*5))
+	return l.LockForKeyWithRetryDelay(key, expiry, retry, time.Second*2)
+}
+
+// LockForKeyWithRetryDelay lock for special key
+func (l *Locker) LockForKeyWithRetryDelay(key string, expiry time.Duration, retry int, retryDelay time.Duration) (*redsync.Mutex, error) {
+	// opt := redsync.SetTries(5)
+	// redsync.SetGenValueFunc()
+	mx := l.sync.NewMutex(key, redsync.SetExpiry(expiry), redsync.SetTries(retry), redsync.SetRetryDelay(retryDelay))
 	return mx, mx.Lock()
 }
 
