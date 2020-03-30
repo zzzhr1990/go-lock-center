@@ -13,7 +13,8 @@ import (
 
 // Locker gloable locker
 type Locker struct {
-	sync *redsync.Redsync
+	sync  *redsync.Redsync
+	pools []redsync.Pool
 }
 
 // CreateNew new instance
@@ -51,7 +52,7 @@ func CreateNew(config *Config) (*Locker, error) {
 	locker := &Locker{
 		sync: redsync.New(sts),
 	}
-
+	locker.pools = sts
 	return locker, nil
 }
 
@@ -90,6 +91,45 @@ func (l *Locker) LockForKeyWithNoRetry(key string, expiry time.Duration) (*redsy
 // Unlock unlock a key
 func (l *Locker) Unlock(key string) (bool, error) {
 	// redsync.SetGenValueFunc()
-	mx := l.sync.NewMutex(key)
-	return mx.Unlock()
+	// mx := l.sync.NewMutex(key)
+	_, err := l.actOnPoolsAsync(func(pool redsync.Pool) (bool, error) {
+		return l.release(pool, key)
+	})
+	return err == nil, err
+}
+
+func (l *Locker) release(pool redsync.Pool, value string) (bool, error) {
+	conn := pool.Get()
+	defer conn.Close()
+	_, err := conn.Do("DEL", value)
+	// status, err := redis.Int64(deleteScript.Do(conn, m.name, value))
+
+	return err == nil, err
+}
+
+func (l *Locker) actOnPoolsAsync(actFn func(redsync.Pool) (bool, error)) (int, error) {
+	type result struct {
+		Status bool
+		Err    error
+	}
+
+	ch := make(chan result)
+	for _, pool := range l.pools {
+		go func(pool redsync.Pool) {
+			r := result{}
+			r.Status, r.Err = actFn(pool)
+			ch <- r
+		}(pool)
+	}
+	n := 0
+	var err error
+	for range l.pools {
+		r := <-ch
+		if r.Status {
+			n++
+		} else if r.Err != nil {
+			err = r.Err
+		}
+	}
+	return n, err
 }
