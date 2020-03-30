@@ -86,3 +86,10 @@ func (l *Locker) LockForKeyWithNoRetry(key string, expiry time.Duration) (*redsy
 	mx := l.sync.NewMutex(key, redsync.SetExpiry(expiry), opt)
 	return mx, mx.Lock()
 }
+
+// Unlock unlock a key
+func (l *Locker) Unlock(key string) bool {
+	// redsync.SetGenValueFunc()
+	mx := l.sync.NewMutex(key)
+	return mx.Unlock()
+}
