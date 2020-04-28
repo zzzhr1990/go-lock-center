@@ -27,22 +27,26 @@ func CreateNew(config *Config) (*Locker, error) {
 
 	for _, ops := range config.RedisAddress {
 		pool := redis.NewPool(func() (redis.Conn, error) {
-			redi, err := redis.DialURL(ops)
+			redi, err := redis.DialURL(ops, redis.DialKeepAlive(time.Minute), redis.DialConnectTimeout(time.Second*10))
+			// redis.DialNetDial()
 			if err != nil {
 				log.Printf("Cannot dial redis: %v", err)
 			}
 
 			return redi, err
 		}, 3)
-		connt := pool.Get()
+		sts = append(sts, pool)
+		/*
+			connt := pool.Get()
 
-		_, err := connt.Do("INFO")
-		connt.Close()
-		if err == nil {
-			sts = append(sts, pool)
-		} else {
-			log.Printf("Redis server error: %v", err)
-		}
+			_, err := connt.Do("INFO")
+			connt.Close()
+			if err == nil {
+				sts = append(sts, pool)
+			} else {
+				log.Printf("Redis server error: %v", err)
+			}
+		*/
 
 	}
 
